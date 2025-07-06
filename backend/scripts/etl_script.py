@@ -2,20 +2,21 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-from datetime import datetime
 import requests
-from io import StringIO
 import kagglehub
+from dotenv import load_dotenv
+from datetime import datetime
+from io import StringIO
+import os
 
 # Création du répertoire pour stocker les données
 if not os.path.exists('data'):
     os.makedirs('data')
 
 # URLs des données (sources publiques pour COVID-19 et mpox)
-COVID_DATA_URL = "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+COVID_DATA_URL = os.getenv("COVID_DATA_URL")
 # MPOX_DATA_URL = "https://7rydd2v2ra.execute-api.eu-central-1.amazonaws.com/web/lastest.csv"
-MPOX_KAGGLE_DATASET = "utkarshx27/mpox-monkeypox-data"
+MPOX_KAGGLE_DATASET = os.getenv("MPOX_KAGGLE_DATASET")
 
 def download_data(url, filename):
     """Télécharger les données à partir de l'URL spécifiée"""

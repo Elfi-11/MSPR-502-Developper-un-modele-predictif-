@@ -27,6 +27,9 @@ if __name__ == "__main__":
     elif command == "importMpox":
         import import_db
         import_db.insert_f_mpox()
+    elif command == "importPrediCovid":
+        import import_db
+        import_db.insert_f_predi_covid()
     else:
         print("Commande non reconnue. Utilisez 'etl', 'dashboard', 'analysis', 'importCovid' ou 'importMpox'.")
         sys.exit(1)
