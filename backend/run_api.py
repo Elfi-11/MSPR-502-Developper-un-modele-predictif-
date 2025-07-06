@@ -30,7 +30,6 @@ if __name__ == "__main__":
     print("\n📌 Informations importantes :")
     print("  • URL de l'API : http://localhost:8000")
     print("  • Documentation : http://localhost:8000/docs")
-    print("  • Endpoints API : http://localhost:8000/api/...")
     print("\n⏳ Démarrage du serveur...")
     time.sleep(1)  # Petite pause pour laisser le temps de lire
     
