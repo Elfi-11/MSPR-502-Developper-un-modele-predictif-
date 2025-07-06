@@ -1470,3 +1470,7 @@ prédire le taux de transmission, la mortalité, la propagation géographique et
 
 pour trouver les futures pandémies par exemple de covid, on doit donc utiliser le résuktat de ces prédictions sur nos datas le taux de transmission, la mortalité, la propagation géographique
 
+modèle retenu : 
+--> new case RF
+--> new death xgb
+--> geographic spread RF
