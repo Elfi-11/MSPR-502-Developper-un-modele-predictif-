@@ -54,12 +54,6 @@ def load_and_clean_covid_data():
     
     # Conversion de la date
     covid_df['date'] = pd.to_datetime(covid_df['date'])
-    
-    # Remplacement des valeurs manquantes
-    covid_df = covid_df.fillna({
-        'new_cases': 0,
-        'new_deaths': 0
-    })
 
     # Effacer les doublons 
     covid_df.drop_duplicates(inplace=True)
@@ -121,8 +115,6 @@ def load_and_clean_mpox_data():
         else:
             print("⚠️ Colonne 'date' absente : aucune conversion possible.")
 
-        # Remplacement des valeurs manquantes (NaN)
-        mpox_clean_df = mpox_clean_df.fillna(0)
 
         # drop les doublons :
         mpox_clean_df.drop_duplicates(inplace=True)
