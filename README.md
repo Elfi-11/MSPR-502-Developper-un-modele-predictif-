@@ -1474,3 +1474,6 @@ modèle retenu :
 --> new case RF
 --> new death xgb
 --> geographic spread RF
+
+
+pour l'instant le fichier script generate-prediction ne génère que pour 2025, à adapter dynamiquement pour le faire par année
