@@ -56,3 +56,9 @@ Thumbs.db
 
 # Data
 data/
+
+# ML Models
+*.joblib
+
+
+
