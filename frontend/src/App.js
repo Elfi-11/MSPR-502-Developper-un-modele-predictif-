@@ -1,16 +1,15 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import Accessibility from './components/Accessibility';
-import Help from './components/Help';
-import Footer from './components/Footer';
+import Accessibility from './components/pages/Accessibility';
+import Help from './components/pages/Help';
+import Footer from './components/footer/Footer';
 import BackToTop from './components/BackToTop';
-import Header from './components/Header';
-import Home from './components/Home';
-import Predictions from './components/Predictions';
-import Archives from './components/Archives';
-import Comparaisons from './components/Comparaisons';
-import { AccessibilityProvider, AccessibilityContext } from './context/AccessibilityContext';
+import Header from './components/header/Header';
+import Home from './components/pages/Home';
+import Predictions from './components/pages/Predictions';
+import Archives from './components/pages/Archives';
+import Comparaisons from './components/pages/Comparaisons';
+import { AccessibilityProvider, AccessibilityContext } from './context';
 
 function AppContent() {
   const { fontSize, darkMode } = useContext(AccessibilityContext);
@@ -42,7 +41,6 @@ function AppLayout({ fontSize, darkMode }) {
           <Route path="/predictions" element={<Predictions />} />
           <Route path="/archives" element={<Archives />} />
           <Route path="/comparaisons" element={<Comparaisons />} />
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/accessibilite" element={<Accessibility />} />
           <Route path="/aide" element={<Help />} />
         </Routes>

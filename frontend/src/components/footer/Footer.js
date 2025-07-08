@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { AccessibilityContext } from '../context/AccessibilityContext';
+import { AccessibilityContext } from '../../context';
 import './Footer.css';
 
 const Footer = () => {
