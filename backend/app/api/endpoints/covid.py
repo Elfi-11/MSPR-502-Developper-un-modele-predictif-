@@ -92,51 +92,51 @@ async def creer_donnees_covid_endpoint(
             detail=f"Erreur interne du serveur: {str(e)}"
         )
 
-# POST - Créer une nouvelle donnée COVID (Form)
-@router.post("/form", response_model=FCovidRead, status_code=status.HTTP_201_CREATED)
-async def creer_donnees_covid_form_endpoint(
-    date: date = Form(...),
-    location_id: int = Form(...),
-    total_cases: Optional[float] = Form(None),
-    new_cases: Optional[float] = Form(None),
-    total_deaths: Optional[float] = Form(None),
-    new_deaths: Optional[float] = Form(None),
-    icu_patients: Optional[float] = Form(None),
-    hosp_patients: Optional[float] = Form(None),
-    total_vaccinations: Optional[float] = Form(None),
-    people_vaccinated: Optional[float] = Form(None),
-    db: AsyncSession = Depends(get_db)
-):
-    try:
-        # Créer l'objet FCovidCreate à partir des données de formulaire
-        covid_data = FCovidCreate(
-            date=date,
-            location_id=location_id,
-            total_cases=total_cases,
-            new_cases=new_cases,
-            total_deaths=total_deaths,
-            new_deaths=new_deaths,
-            icu_patients=icu_patients,
-            hosp_patients=hosp_patients,
-            total_vaccinations=total_vaccinations,
-            people_vaccinated=people_vaccinated
-        )
-        
-        # Vérifier si le pays existe
-        location = await obtenir_pays_par_id(db, covid_data.location_id)
-        if not location:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Le pays avec l'ID {covid_data.location_id} n'existe pas dans la base de données"
-            )
-        
-        return await creer_donnees_covid(db, covid_data)
-    except Exception as e:
-        logger.error(f"Erreur lors de la création des données COVID via formulaire: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur interne du serveur: {str(e)}"
-        )
+# POST - Créer une nouvelle donnée COVID (Form) - TEMPORAIREMENT DESACTIVE
+# @router.post("/form", response_model=FCovidRead, status_code=status.HTTP_201_CREATED)
+# async def creer_donnees_covid_form_endpoint(
+#     date: date = Form(...),
+#     location_id: int = Form(...),
+#     total_cases: Optional[float] = Form(None),
+#     new_cases: Optional[float] = Form(None),
+#     total_deaths: Optional[float] = Form(None),
+#     new_deaths: Optional[float] = Form(None),
+#     icu_patients: Optional[float] = Form(None),
+#     hosp_patients: Optional[float] = Form(None),
+#     total_vaccinations: Optional[float] = Form(None),
+#     people_vaccinated: Optional[float] = Form(None),
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     try:
+#         # Créer l'objet FCovidCreate à partir des données de formulaire
+#         covid_data = FCovidCreate(
+#             date=date,
+#             location_id=location_id,
+#             total_cases=total_cases,
+#             new_cases=new_cases,
+#             total_deaths=total_deaths,
+#             new_deaths=new_deaths,
+#             icu_patients=icu_patients,
+#             hosp_patients=hosp_patients,
+#             total_vaccinations=total_vaccinations,
+#             people_vaccinated=people_vaccinated
+#         )
+#         
+#         # Vérifier si le pays existe
+#         location = await obtenir_pays_par_id(db, covid_data.location_id)
+#         if not location:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail=f"Le pays avec l'ID {covid_data.location_id} n'existe pas dans la base de données"
+#             )
+#         
+#         return await creer_donnees_covid(db, covid_data)
+#     except Exception as e:
+#         logger.error(f"Erreur lors de la création des données COVID via formulaire: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Erreur interne du serveur: {str(e)}"
+#         )
 
 # PUT - Mettre à jour une donnée COVID existante
 @router.put("/{covid_fact_id}", response_model=FCovidRead)

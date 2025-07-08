@@ -40,7 +40,7 @@ async def check_and_create_tables():
         print(f"❌ Erreur lors de la vérification/création des tables: {str(e)}")
         raise
 
-@router.post("/predictions/generate/{year}", response_model=List[FPrediCovidRead])
+@router.post("/generate/{year}", response_model=List[FPrediCovidRead])
 async def generate_predictions_for_year(
     year: int,
     db: AsyncSession = Depends(get_db)
@@ -110,7 +110,7 @@ async def generate_predictions_for_year(
             detail=f"Erreur lors de la génération des prédictions: {str(e)}"
         )
 
-@router.get("/predictions/", response_model=List[FPrediCovidRead])
+@router.get("/", response_model=List[FPrediCovidRead])
 async def get_predictions(
     skip: int = 0,
     limit: int = 100,
@@ -130,7 +130,7 @@ async def get_predictions(
     )
     return predictions
 
-@router.get("/predictions/{pred_id}", response_model=FPrediCovidRead)
+@router.get("/{pred_id}", response_model=FPrediCovidRead)
 async def get_prediction_by_id(
     pred_id: int,
     db: AsyncSession = Depends(get_db)
@@ -146,7 +146,7 @@ async def get_prediction_by_id(
         )
     return prediction
 
-@router.delete("/predictions/{pred_id}")
+@router.delete("/{pred_id}")
 async def delete_prediction(
     pred_id: int,
     db: AsyncSession = Depends(get_db)
