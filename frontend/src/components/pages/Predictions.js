@@ -6,6 +6,10 @@ const Predictions = () => {
   const [locations, setLocations] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // États pour les filtres
+  const [selectedCountry, setSelectedCountry] = useState('Afghanistan');
+  const [availableCountries, setAvailableCountries] = useState([]);
 
   // Fonction pour récupérer les données de prédictions
   const fetchPredictions = async () => {
@@ -29,6 +33,16 @@ const Predictions = () => {
       
       setPredictionsData(predictionsData);
       setLocations(locationsData);
+      
+      // Créer la liste des pays disponibles
+      if (locationsData && locationsData.length > 0) {
+        const countries = locationsData.map(location => location.location_name || 'Inconnu');
+        const uniqueCountries = [...new Set(countries)].sort();
+        setAvailableCountries(uniqueCountries);
+        
+        // Définir Afghanistan par défaut car c'est le seul pays avec des données de prédiction
+        setSelectedCountry('Afghanistan');
+      }
       
     } catch (err) {
       setError(err.message);
@@ -62,23 +76,68 @@ const Predictions = () => {
       <h1>Prédictions COVID-19</h1>
       <p>Visualisation des prédictions générées par le modèle de machine learning.</p>
       
+      {/* Zone de filtres globale */}
+      <div style={{ 
+        backgroundColor: '#f8f9fa', 
+        padding: '1.5rem', 
+        borderRadius: '8px', 
+        marginBottom: '2rem',
+        border: '1px solid #e9ecef'
+      }}>
+        <h3 style={{ margin: '0 0 1rem 0', color: '#495057' }}>Filtres</h3>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label htmlFor="country-select" style={{ fontWeight: '500', color: '#495057' }}>
+              Pays :
+            </label>
+            <select
+              id="country-select"
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: '1px solid #ced4da',
+                fontSize: '1rem',
+                minWidth: '200px'
+              }}
+            >
+              <option value="">Tous les pays</option>
+              {availableCountries.map(country => (
+                <option key={country} value={country}>{country}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        {selectedCountry && (
+          <p style={{ margin: '1rem 0 0 0', color: '#6c757d', fontStyle: 'italic' }}>
+            Données filtrées pour : <strong>{selectedCountry}</strong>
+          </p>
+        )}
+      </div>
+      
       <div style={{ marginTop: '2rem' }}>
         <GeographicSpreadChart 
           predictionsData={predictionsData} 
           locations={locations} 
-          isLoading={isLoading} 
+          isLoading={isLoading}
+          selectedCountry={selectedCountry}
         />
         
         <MortalityChart 
           predictionsData={predictionsData} 
           locations={locations} 
-          isLoading={isLoading} 
+          isLoading={isLoading}
+          selectedCountry={selectedCountry}
         />
         
         <TransmissionChart 
           predictionsData={predictionsData} 
           locations={locations} 
-          isLoading={isLoading} 
+          isLoading={isLoading}
+          selectedCountry={selectedCountry}
         />
       </div>
     </main>
