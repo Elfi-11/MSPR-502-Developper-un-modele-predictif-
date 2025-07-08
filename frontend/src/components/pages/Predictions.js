@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import GeographicSpreadChart from './GeographicSpreadChart';
-import MortalityChart from './MortalityChart';
-import TransmissionChart from './TransmissionChart';
+import { GeographicSpreadChart, MortalityChart, TransmissionChart } from '../charts';
 
 const Predictions = () => {
   const [predictionsData, setPredictionsData] = useState(null);
@@ -16,14 +14,14 @@ const Predictions = () => {
       setError(null);
       
       // Récupérer les prédictions
-      const predictionsResponse = await fetch('/api/predictions/');
+      const predictionsResponse = await fetch('http://localhost:8000/api/predictions/');
       if (!predictionsResponse.ok) {
         throw new Error('Erreur lors de la récupération des prédictions');
       }
       const predictionsData = await predictionsResponse.json();
       
       // Récupérer les locations
-      const locationsResponse = await fetch('/api/pays/');
+      const locationsResponse = await fetch('http://localhost:8000/api/pays/');
       if (!locationsResponse.ok) {
         throw new Error('Erreur lors de la récupération des locations');
       }
@@ -64,14 +62,6 @@ const Predictions = () => {
       <h1>Prédictions COVID-19</h1>
       <p>Visualisation des prédictions générées par le modèle de machine learning.</p>
       
-      {/* Debug: Afficher les données */}
-      <div style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-        <h3>Debug Info:</h3>
-        <p>Prédictions: {predictionsData ? predictionsData.length : 0} éléments</p>
-        <p>Locations: {locations ? locations.length : 0} éléments</p>
-        <p>Status: {isLoading ? 'Chargement...' : 'Chargé'}</p>
-      </div>
-      
       <div style={{ marginTop: '2rem' }}>
         <GeographicSpreadChart 
           predictionsData={predictionsData} 
@@ -95,4 +85,4 @@ const Predictions = () => {
   );
 };
 
-export default Predictions;
+export default Predictions; 
