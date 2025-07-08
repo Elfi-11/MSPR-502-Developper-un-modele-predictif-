@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AccessibilityContext } from '../context/AccessibilityContext';
+import { AccessibilityContext } from '../../context';
 import './Header.css';
 
 const Header = () => {
