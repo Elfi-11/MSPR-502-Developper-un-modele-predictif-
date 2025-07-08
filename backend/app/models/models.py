@@ -71,7 +71,7 @@ class FPrediCovid(Base):
     date_generation = Column(DateTime, server_default=func.now())
     location_id = Column(Integer, ForeignKey('d_location.location_id'), nullable=False)
     indicateur = Column(String(50), nullable=False)  # "transmission", "mortalite", "propagation"
-    horizon = Column(Integer, nullable=False)        # 7, 30, 180, etc.
+    horizon = Column(Integer, nullable=True)        # 7, 30, 180, etc.
     valeur_predite = Column(Numeric(15, 2), nullable=False)
     model_name = Column(String(100), nullable=False) # Nom du modèle utilisé pour la prédiction
    # scenario = Column(String(100), nullable=True)
