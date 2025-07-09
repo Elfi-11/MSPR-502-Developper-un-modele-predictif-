@@ -116,7 +116,7 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
 
     working_data = latest_data
     total_countries = len(working_data)
-    processed_locations = set()  # Pour suivre les pays traités
+    processed_locations = set()
 
     print(f"🌍 Début de la génération pour {total_countries} pays")
 
@@ -140,14 +140,14 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
             location = row["location"]
             print(f"🔄 Traitement pays {i}/{total_countries}: {location}")
 
-            # Valeurs initiales
-            total_cases = row["total_cases"]
-            total_deaths = row["total_deaths"]
-            new_cases_rolling7 = row["new_cases_rolling7"]
-            trend_new_cases = row["trend_new_cases"]
-            new_cases = row["new_cases"]
-
-            country_predictions = []  # Prédictions pour le pays en cours
+            # Valeurs de base de 2024 (ne seront pas modifiées)
+            base_total_cases = row["total_cases"]
+            base_total_deaths = row["total_deaths"]
+            
+            # Historique pour calculer la moyenne mobile
+            new_cases_history = [row["new_cases"]] * 7  # Initialiser avec la dernière valeur connue
+            
+            country_predictions = []
 
             for single_date in date_range:
                 day = single_date.day
@@ -155,19 +155,25 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
                 year = single_date.year
                 days_since_start = (single_date - data["date"].min()).days
 
+                # Calculer la moyenne mobile sur 7 jours
+                new_cases_rolling7 = sum(new_cases_history[-7:]) / 7
+
+                # Calculer la tendance sur 7 jours
+                trend_new_cases = new_cases_history[-1] - new_cases_history[-7] if len(new_cases_history) >= 7 else row["trend_new_cases"]
+
                 # Features de base communes
                 base_features = { 
-                    "total_cases": total_cases,
+                    "total_cases": base_total_cases,  # Utiliser les valeurs de base
                     "location_encoded": row["location_encoded"],
                     "day": day,
                     "month": month,
                     "year": year,
-                    "total_deaths": total_deaths,
+                    "total_deaths": base_total_deaths,  # Utiliser les valeurs de base
                     "epidemic_phase": 1,
                     "days_since_start": days_since_start,
                     "new_cases_rolling7": new_cases_rolling7,
                     "trend_new_cases": trend_new_cases,
-                    "new_cases": new_cases
+                    "new_cases": new_cases_history[-1]
                 }
 
                 # Prédiction des cas
@@ -181,6 +187,11 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
                 # Prédiction de la propagation géographique
                 features_for_geo = pd.DataFrame([base_features])[features_geo]
                 countries_reporting_pred = model_geo.predict(features_for_geo)[0]
+
+                # Mettre à jour l'historique des cas pour la moyenne mobile
+                new_cases_history.append(new_cases_pred)
+                if len(new_cases_history) > 7:
+                    new_cases_history.pop(0)
 
                 country_predictions.append({
                     "date": single_date.date(),

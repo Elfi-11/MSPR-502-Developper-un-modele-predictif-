@@ -52,17 +52,17 @@ async def get_countries_with_predictions(
     Récupère la liste des pays qui ont des prédictions de nouveaux cas (new_cases)
     """
     try:
-        # Utiliser une requête SQL directe pour plus d'efficacité
-        query = text("""
-            SELECT DISTINCT dl.location_name
-            FROM d_location dl
-            JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
-            WHERE fpc.indicateur = 'new_cases'
-            ORDER BY dl.location_name;
-        """)
+        # Utiliser SQLAlchemy de manière asynchrone
+        from sqlalchemy import select, distinct
+        from backend.app.models.models import DLocation, FPrediCovid
+        
+        query = select(distinct(DLocation.location_name))\
+            .join(FPrediCovid, DLocation.location_id == FPrediCovid.location_id)\
+            .where(FPrediCovid.indicateur == 'new_cases')\
+            .order_by(DLocation.location_name)
         
         result = await db.execute(query)
-        countries = [row[0] for row in result]
+        countries = [row[0] for row in result.fetchall()]
         
         if not countries:
             raise HTTPException(
@@ -85,7 +85,7 @@ async def get_all_predictions_by_year(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Récupère toutes les prédictions de nouveaux cas pour tous les pays pour une année spécifique
+    Récupère toutes les prédictions pour tous les pays pour une année spécifique
     """
     try:
         # Construire les dates de début et fin d'année
@@ -94,16 +94,29 @@ async def get_all_predictions_by_year(
         
         # Utiliser une requête SQL directe pour plus d'efficacité
         query = text("""
+            WITH predictions_by_type AS (
+                -- Récupérer les nouveaux cas
+                SELECT 
+                    dl.location_name as pays,
+                    fpc.date_predite,
+                    fpc.valeur_predite as valeur,
+                    fpc.indicateur,
+                    fpc.model_name
+                FROM d_location dl
+                JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
+                WHERE fpc.date_predite BETWEEN :date_debut AND :date_fin
+                AND fpc.indicateur IN ('new_cases', 'new_deaths', 'countries_reporting')
+            )
             SELECT 
-                dl.location_name as pays,
-                fpc.date_predite,
-                fpc.valeur_predite as nouveaux_cas,
-                fpc.model_name
-            FROM d_location dl
-            JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
-            WHERE fpc.indicateur = 'new_cases'
-            AND fpc.date_predite BETWEEN :date_debut AND :date_fin
-            ORDER BY dl.location_name, fpc.date_predite;
+                pays,
+                date_predite,
+                MAX(CASE WHEN indicateur = 'new_cases' THEN valeur END) as nouveaux_cas,
+                MAX(CASE WHEN indicateur = 'new_deaths' THEN valeur END) as deces,
+                MAX(CASE WHEN indicateur = 'countries_reporting' THEN valeur END) as countries_reporting_pred,
+                MAX(CASE WHEN indicateur = 'new_cases' THEN model_name END) as model_name
+            FROM predictions_by_type
+            GROUP BY pays, date_predite
+            ORDER BY pays, date_predite;
         """)
         
         result = await db.execute(
@@ -120,7 +133,9 @@ async def get_all_predictions_by_year(
                 
             predictions_par_pays[pays].append({
                 "date": row.date_predite.strftime("%Y-%m-%d"),
-                "nouveaux_cas": float(row.nouveaux_cas),
+                "nouveaux_cas": float(row.nouveaux_cas or 0),
+                "deces": float(row.deces or 0),
+                "countries_reporting_pred": float(row.countries_reporting_pred or 0),
                 "modele": row.model_name
             })
         
