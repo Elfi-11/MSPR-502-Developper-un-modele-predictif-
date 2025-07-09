@@ -47,6 +47,7 @@ const CovidArchiveFilter = ({
             onChange={handleCountryChange}
             input={<OutlinedInput label="Sélectionner des pays (A-Z)" />}
             renderValue={() => `${selectedCountries.length} pays sélectionnés`}
+            data-testid="country-filter"
             MenuProps={{
               PaperProps: {
                 style: {
@@ -57,7 +58,7 @@ const CovidArchiveFilter = ({
             }}
           >
             {countries.map((country) => (
-              <MenuItem key={country.location_id} value={country}>
+              <MenuItem key={country.location_id} value={country} data-testid={`country-option-${country.location_name}`}>
                 <Checkbox checked={selectedCountries.some(c => c.location_id === country.location_id)} />
                 <ListItemText primary={country.location_name} />
               </MenuItem>
@@ -97,6 +98,7 @@ const CovidArchiveFilter = ({
                 color="primary"
                 variant="outlined"
                 size="small"
+                data-testid={`selected-country-${country.location_name}`}
               />
             ))}
           </Box>

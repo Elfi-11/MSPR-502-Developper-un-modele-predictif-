@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open",
+    "test:archives": "cypress run --spec \"cypress/e2e/covid-archives.cy.js\"",
+    "test:navigation": "cypress run --spec \"cypress/e2e/navigation.cy.js\""
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
@@ -26,6 +30,7 @@
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
+    "cypress": "^14.5.1",
     "vite": "^5.1.0"
   }
 }
