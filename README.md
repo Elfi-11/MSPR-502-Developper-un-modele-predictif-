@@ -321,3 +321,6 @@ Ce projet est développé à des fins éducatives et de recherche dans le cadre 
 - Prédictions en temps réel
 - Interface web pour visualiser les prédictions
 - Modèles spécifiques par région/pays 
+
+
+--> il manque des pays dans les ^redictions a peut près 20, script de generation de prediciton a revoir

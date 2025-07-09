@@ -5,6 +5,12 @@ api_router = APIRouter()
 
 # Inclusion des différents routers pour chaque partie de l'API
 api_router.include_router(
+    predictions.router,
+    prefix="/predictions",
+    tags=["Prédictions COVID-19"]
+)
+
+api_router.include_router(
     locations.router,
     prefix="/pays",
     tags=["Pays et localisations"]
@@ -20,10 +26,4 @@ api_router.include_router(
     mpox.router,
     prefix="/mpox",
     tags=["Données Mpox"]
-)
-
-api_router.include_router(
-    predictions.router,
-    prefix="/predictions",
-    tags=["Prédictions COVID-19"]
 )
