@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Accessibility from './components/pages/Accessibility';
 import Help from './components/pages/Help';
 import Footer from './components/footer/Footer';
@@ -11,17 +11,8 @@ import Archives from './components/pages/Archives';
 import Comparaisons from './components/pages/Comparaisons';
 import { AccessibilityProvider, AccessibilityContext } from './context';
 
-function AppContent() {
+function AppLayout() {
   const { fontSize, darkMode } = useContext(AccessibilityContext);
-  
-  return (
-    <Router>
-      <AppLayout fontSize={fontSize} darkMode={darkMode} />
-    </Router>
-  );
-}
-
-function AppLayout({ fontSize, darkMode }) {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
@@ -54,7 +45,9 @@ function AppLayout({ fontSize, darkMode }) {
 function App() {
   return (
     <AccessibilityProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
     </AccessibilityProvider>
   );
 }
