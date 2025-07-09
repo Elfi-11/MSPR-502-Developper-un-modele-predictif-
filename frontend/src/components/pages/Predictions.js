@@ -22,9 +22,8 @@ import {
 } from 'chart.js';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { fetchCountries } from '../../services/api';
+import { fetchCountries, fetchPredictions } from '../../services/api';
 
-// Enregistrer les composants Chart.js nécessaires
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -35,7 +34,7 @@ ChartJS.register(
   Legend
 );
 
-// Couleurs pour les pays (on en définit plus pour avoir assez de couleurs)
+// Couleurs pour les pays
 const COUNTRY_COLORS = {
   'Afghanistan': 'rgb(255, 99, 132)',   // Rouge
   'Albania': 'rgb(54, 162, 235)',       // Bleu
@@ -57,6 +56,7 @@ const Predictions = () => {
   const [selectedCountries, setSelectedCountries] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [predictionsData, setPredictionsData] = useState(null);
 
   // Charger la liste des pays au montage du composant
   useEffect(() => {
@@ -70,7 +70,6 @@ const Predictions = () => {
         console.log('Pays reçus:', countries);
         
         setAvailableCountries(countries);
-        // Ne plus sélectionner automatiquement les 5 premiers pays
         setSelectedCountries([]);
       } catch (error) {
         console.error('Erreur:', error);
@@ -82,6 +81,107 @@ const Predictions = () => {
 
     loadCountries();
   }, []);
+
+  // Charger les prédictions quand les pays sélectionnés changent
+  useEffect(() => {
+    const loadPredictions = async () => {
+      if (selectedCountries.length === 0) {
+        setPredictionsData(null);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const predictionsData = await fetchPredictions(2025);
+        console.log('Données brutes reçues:', predictionsData);
+        
+        // Initialiser les structures de données pour le calcul des sommes
+        const monthlyData = {};
+        selectedCountries.forEach(country => {
+          monthlyData[country] = Array(12).fill(0);
+        });
+
+        // Pour chaque pays sélectionné, traiter ses prédictions
+        selectedCountries.forEach(country => {
+          if (predictionsData[country]) {
+            console.log(`Données pour ${country}:`, predictionsData[country].slice(0, 5));
+            predictionsData[country].forEach(pred => {
+              const date = new Date(pred.date);
+              const month = date.getMonth();
+              // Utiliser la valeur directement sans division
+              monthlyData[country][month] += parseFloat(pred.nouveaux_cas);
+            });
+          }
+        });
+
+        // Afficher les totaux pour debug
+        selectedCountries.forEach(country => {
+          console.log(`Totaux mensuels pour ${country}:`, [...monthlyData[country]]);
+        });
+
+        setPredictionsData({
+          labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+          datasets: selectedCountries.map(country => ({
+            label: country,
+            data: monthlyData[country],
+            borderColor: COUNTRY_COLORS[country] || '#' + Math.floor(Math.random()*16777215).toString(16),
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 2
+          }))
+        });
+
+      } catch (error) {
+        console.error('Erreur lors du chargement des prédictions:', error);
+        setError('Erreur lors du chargement des prédictions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPredictions();
+  }, [selectedCountries]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 20
+        }
+      },
+      title: {
+        display: true,
+        text: 'Total mensuel des cas COVID-19 prédits pour 2025'
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} cas au total`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Nombre total de cas par mois'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Mois'
+        }
+      }
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -102,7 +202,6 @@ const Predictions = () => {
           options={availableCountries}
           value={selectedCountries}
           onChange={(event, newValue) => {
-            // Limiter à 5 pays maximum
             if (newValue.length <= 5) {
               setSelectedCountries(newValue);
             }
@@ -115,16 +214,22 @@ const Predictions = () => {
             />
           )}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip
-                label={option}
-                {...getTagProps({ index })}
-                style={{
-                  backgroundColor: COUNTRY_COLORS[option] || '#e0e0e0',
-                  color: 'white'
-                }}
-              />
-            ))
+            value.map((option, index) => {
+              const props = getTagProps({ index });
+              // Retirer la prop key du spread pour éviter le warning
+              const { key, ...otherProps } = props;
+              return (
+                <Chip
+                  key={key}
+                  label={option}
+                  {...otherProps}
+                  style={{
+                    backgroundColor: COUNTRY_COLORS[option] || '#e0e0e0',
+                    color: 'white'
+                  }}
+                />
+              );
+            })
           }
           loading={loading}
           disabled={loading}
@@ -135,9 +240,18 @@ const Predictions = () => {
       {loading ? (
         <Typography>Chargement des données...</Typography>
       ) : (
-        <Typography>
-          {availableCountries.length} pays disponibles
-        </Typography>
+        <>
+          <Typography>
+            {availableCountries.length} pays disponibles
+          </Typography>
+          
+          {/* Graphique */}
+          {predictionsData && (
+            <Box sx={{ height: '500px', mt: 3 }}>
+              <Line data={predictionsData} options={chartOptions} />
+            </Box>
+          )}
+        </>
       )}
     </Container>
   );

@@ -1,13 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, and_
 from typing import List, Optional
 from datetime import datetime, date
 
 from backend.app.core.database import get_db, engine
 from backend.app.crud import predi_covid as crud_predi_covid
 from backend.app.crud import location as crud_location
-from backend.app.schemas.schemas import FPrediCovidCreate, FPrediCovidRead
+from backend.app.schemas.schemas import (
+    FPrediCovidCreate,
+    FPrediCovidRead,
+    PredictionFilters,
+    IndicateurType
+)
 from backend.app.models.models import FPrediCovid, Base
 
 router = APIRouter()
@@ -30,7 +35,6 @@ async def check_and_create_tables():
             
             if not table_exists:
                 print("🔧 Table f_predi_covid n'existe pas, création en cours...")
-                # Créer toutes les tables
                 await conn.run_sync(Base.metadata.create_all)
                 print("✅ Tables créées avec succès")
             else:
@@ -40,13 +44,231 @@ async def check_and_create_tables():
         print(f"❌ Erreur lors de la vérification/création des tables: {str(e)}")
         raise
 
+@router.get("/countries", response_model=List[str], tags=["Prédictions"])
+async def get_countries_with_predictions(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Récupère la liste des pays qui ont des prédictions de nouveaux cas (new_cases)
+    """
+    try:
+        # Utiliser une requête SQL directe pour plus d'efficacité
+        query = text("""
+            SELECT DISTINCT dl.location_name
+            FROM d_location dl
+            JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
+            WHERE fpc.indicateur = 'new_cases'
+            ORDER BY dl.location_name;
+        """)
+        
+        result = await db.execute(query)
+        countries = [row[0] for row in result]
+        
+        if not countries:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Aucun pays trouvé avec des prédictions de nouveaux cas"
+            )
+            
+        return countries
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des pays: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des pays: {str(e)}"
+        )
+
+@router.get("/all-predictions/{year}")
+async def get_all_predictions_by_year(
+    year: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Récupère toutes les prédictions de nouveaux cas pour tous les pays pour une année spécifique
+    """
+    try:
+        # Construire les dates de début et fin d'année
+        date_debut = date(year, 1, 1)
+        date_fin = date(year, 12, 31)
+        
+        # Utiliser une requête SQL directe pour plus d'efficacité
+        query = text("""
+            SELECT 
+                dl.location_name as pays,
+                fpc.date_predite,
+                fpc.valeur_predite as nouveaux_cas,
+                fpc.model_name
+            FROM d_location dl
+            JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
+            WHERE fpc.indicateur = 'new_cases'
+            AND fpc.date_predite BETWEEN :date_debut AND :date_fin
+            ORDER BY dl.location_name, fpc.date_predite;
+        """)
+        
+        result = await db.execute(
+            query,
+            {"date_debut": date_debut, "date_fin": date_fin}
+        )
+        
+        # Organiser les prédictions par pays
+        predictions_par_pays = {}
+        for row in result:
+            pays = row.pays
+            if pays not in predictions_par_pays:
+                predictions_par_pays[pays] = []
+                
+            predictions_par_pays[pays].append({
+                "date": row.date_predite.strftime("%Y-%m-%d"),
+                "nouveaux_cas": float(row.nouveaux_cas),
+                "modele": row.model_name
+            })
+        
+        if not predictions_par_pays:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Aucune prédiction trouvée pour l'année {year}"
+            )
+            
+        return predictions_par_pays
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des prédictions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des prédictions: {str(e)}"
+        )
+
+@router.get("/predictions-by-country/{year}")
+async def get_predictions_by_country_and_year(
+    year: int,
+    pays: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Récupère toutes les prédictions de nouveaux cas pour un pays et une année spécifique
+    """
+    try:
+        # Construire les dates de début et fin d'année
+        date_debut = f"{year}-01-01"
+        date_fin = f"{year}-12-31"
+        
+        # Utiliser une requête SQL directe pour plus d'efficacité
+        query = text("""
+            SELECT 
+                dl.location_name as pays,
+                fpc.date_predite,
+                fpc.valeur_predite as nouveaux_cas,
+                fpc.model_name
+            FROM d_location dl
+            JOIN f_predi_covid fpc ON dl.location_id = fpc.location_id
+            WHERE dl.location_name = :pays
+            AND fpc.indicateur = 'new_cases'
+            AND fpc.date_predite BETWEEN :date_debut AND :date_fin
+            ORDER BY fpc.date_predite;
+        """)
+        
+        result = await db.execute(
+            query,
+            {"pays": pays, "date_debut": date_debut, "date_fin": date_fin}
+        )
+        
+        predictions = []
+        for row in result:
+            predictions.append({
+                "pays": row.pays,
+                "date": row.date_predite.strftime("%Y-%m-%d"),
+                "nouveaux_cas": float(row.nouveaux_cas),
+                "modele": row.model_name
+            })
+        
+        if not predictions:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Aucune prédiction trouvée pour {pays} en {year}"
+            )
+            
+        return predictions
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des prédictions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des prédictions: {str(e)}"
+        )
+
+@router.get("/", response_model=List[FPrediCovidRead])
+async def get_predictions(
+    filters: PredictionFilters = Depends(),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Récupère les prédictions avec filtres optionnels
+    """
+    try:
+        all_predictions = []
+        
+        # Si un nom de pays est fourni
+        if filters.pays:
+            location = await crud_location.obtenir_pays_par_nom(db, filters.pays)
+            if location:
+                predictions = await crud_predi_covid.liste_predictions_covid(
+                    db, 
+                    skip=filters.skip, 
+                    limit=filters.limit,
+                    location_id=location.location_id,
+                    indicateur=filters.indicateur.value if filters.indicateur else None,
+                    date_debut=filters.date_debut,
+                    date_fin=filters.date_fin
+                )
+                all_predictions.extend(predictions)
+            else:
+                print(f"Pays non trouvé: {filters.pays}")
+        else:
+            # Si aucun pays n'est spécifié, récupérer toutes les prédictions
+            predictions = await crud_predi_covid.liste_predictions_covid(
+                db, 
+                skip=filters.skip, 
+                limit=filters.limit,
+                location_id=filters.location_id,
+                indicateur=filters.indicateur.value if filters.indicateur else None,
+                date_debut=filters.date_debut,
+                date_fin=filters.date_fin
+            )
+            all_predictions.extend(predictions)
+        
+        return all_predictions
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des prédictions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération des prédictions: {str(e)}"
+        )
+
+@router.get("/{pred_id}", response_model=FPrediCovidRead)
+async def get_prediction_by_id(
+    pred_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Récupère une prédiction par son ID
+    """
+    prediction = await crud_predi_covid.obtenir_prediction_covid_par_id(db, pred_id)
+    if prediction is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prédiction non trouvée"
+        )
+    return prediction
+
 @router.post("/generate/{year}", response_model=List[FPrediCovidRead])
 async def generate_predictions_for_year(
     year: int,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Génère des prédictions pour une année donnée et les sauvegarde en base de données
+    Génère des prédictions pour une année donnée
     """
     try:
         # 1. Vérifier et créer les tables si nécessaire
@@ -86,7 +308,6 @@ async def generate_predictions_for_year(
                     date_predite=pred_data["date"],
                     location_id=location.location_id,
                     indicateur=indicateur,
-                    horizon=365,  # Prédiction sur 1 an
                     valeur_predite=float(valeur),
                     model_name="RF_XGB_Ensemble"  # Nom du modèle utilisé
                 )
@@ -109,42 +330,6 @@ async def generate_predictions_for_year(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la génération des prédictions: {str(e)}"
         )
-
-@router.get("/", response_model=List[FPrediCovidRead])
-async def get_predictions(
-    skip: int = 0,
-    limit: int = 100,
-    location_id: Optional[int] = None,
-    indicateur: Optional[str] = None,
-    horizon: Optional[int] = None,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Récupère les prédictions avec filtres optionnels
-    """
-    predictions = await crud_predi_covid.liste_predictions_covid(
-        db, skip=skip, limit=limit, 
-        location_id=location_id, 
-        indicateur=indicateur, 
-        horizon=horizon
-    )
-    return predictions
-
-@router.get("/{pred_id}", response_model=FPrediCovidRead)
-async def get_prediction_by_id(
-    pred_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Récupère une prédiction par son ID
-    """
-    prediction = await crud_predi_covid.obtenir_prediction_covid_par_id(db, pred_id)
-    if prediction is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Prédiction non trouvée"
-        )
-    return prediction
 
 @router.delete("/{pred_id}")
 async def delete_prediction(
