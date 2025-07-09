@@ -116,7 +116,7 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
 
     working_data = latest_data
     total_countries = len(working_data)
-    processed_locations = set()  # Pour suivre les pays traités
+    processed_locations = set()
 
     print(f"🌍 Début de la génération pour {total_countries} pays")
 
@@ -143,17 +143,27 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
             # Valeurs initiales
             total_cases = row["total_cases"]
             total_deaths = row["total_deaths"]
-            new_cases_rolling7 = row["new_cases_rolling7"]
-            trend_new_cases = row["trend_new_cases"]
-            new_cases = row["new_cases"]
-
-            country_predictions = []  # Prédictions pour le pays en cours
+            new_cases_history = []  # Historique pour calculer la moyenne mobile
+            
+            country_predictions = []
 
             for single_date in date_range:
                 day = single_date.day
                 month = single_date.month
                 year = single_date.year
                 days_since_start = (single_date - data["date"].min()).days
+
+                # Calculer la moyenne mobile sur 7 jours
+                if len(new_cases_history) >= 7:
+                    new_cases_rolling7 = sum(new_cases_history[-7:]) / 7
+                else:
+                    new_cases_rolling7 = row["new_cases_rolling7"]
+
+                # Calculer la tendance sur 7 jours
+                if len(new_cases_history) >= 7:
+                    trend_new_cases = new_cases_history[-1] - new_cases_history[-7]
+                else:
+                    trend_new_cases = row["trend_new_cases"]
 
                 # Features de base communes
                 base_features = { 
@@ -167,7 +177,7 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
                     "days_since_start": days_since_start,
                     "new_cases_rolling7": new_cases_rolling7,
                     "trend_new_cases": trend_new_cases,
-                    "new_cases": new_cases
+                    "new_cases": new_cases_history[-1] if new_cases_history else row["new_cases"]
                 }
 
                 # Prédiction des cas
@@ -181,6 +191,11 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
                 # Prédiction de la propagation géographique
                 features_for_geo = pd.DataFrame([base_features])[features_geo]
                 countries_reporting_pred = model_geo.predict(features_for_geo)[0]
+
+                # Mettre à jour les valeurs cumulatives
+                total_cases += new_cases_pred
+                total_deaths += new_deaths_pred
+                new_cases_history.append(new_cases_pred)
 
                 country_predictions.append({
                     "date": single_date.date(),
