@@ -53,6 +53,7 @@ if latest_data.empty:
 # === NETTOYAGE DES DONNÉES D'ENTRÉE ===
 print(f"🧹 Nettoyage des données d'entrée...")
 print(f"Avant nettoyage: {len(latest_data)} pays")
+print(f"Pays disponibles: {sorted(latest_data['location'].unique())}")
 
 # Remplacer les valeurs NaN par des valeurs par défaut
 latest_data["new_cases"] = latest_data["new_cases"].fillna(0)
@@ -64,6 +65,7 @@ latest_data["trend_new_cases"] = latest_data["trend_new_cases"].fillna(0)
 latest_data = latest_data.dropna(subset=["total_cases", "total_deaths", "location_encoded"])
 
 print(f"Après nettoyage: {len(latest_data)} pays")
+print(f"Pays retenus après nettoyage: {sorted(latest_data['location'].unique())}")
 
 def post_traitement(predictions):
     """
@@ -113,7 +115,10 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
     future_rows = []
 
     working_data = latest_data
-    print(f"🌍 Génération pour {len(working_data)} pays")
+    total_countries = len(working_data)
+    processed_locations = set()  # Pour suivre les pays traités
+
+    print(f"🌍 Début de la génération pour {total_countries} pays")
 
     # Features pour chaque modèle
     features_cases = [
@@ -130,60 +135,83 @@ def generate_predictions(year_to_predict: int = YEAR_TO_PREDICT):
 
     features_geo = features_deaths.copy()
 
-    for _, row in working_data.iterrows():
-        # Valeurs initiales
-        total_cases = row["total_cases"]
-        total_deaths = row["total_deaths"]
-        new_cases_rolling7 = row["new_cases_rolling7"]
-        trend_new_cases = row["trend_new_cases"]
-        new_cases = row["new_cases"]
+    try:
+        for i, (_, row) in enumerate(working_data.iterrows(), 1):
+            location = row["location"]
+            print(f"🔄 Traitement pays {i}/{total_countries}: {location}")
 
-        for single_date in date_range:
-            day = single_date.day
-            month = single_date.month
-            year = single_date.year
-            days_since_start = (single_date - data["date"].min()).days
+            # Valeurs initiales
+            total_cases = row["total_cases"]
+            total_deaths = row["total_deaths"]
+            new_cases_rolling7 = row["new_cases_rolling7"]
+            trend_new_cases = row["trend_new_cases"]
+            new_cases = row["new_cases"]
 
-            # Features de base communes
-            base_features = { 
-                "total_cases": total_cases,
-                "location_encoded": row["location_encoded"],
-                "day": day,
-                "month": month,
-                "year": year,
-                "total_deaths": total_deaths,
-                "epidemic_phase": 1,
-                "days_since_start": days_since_start,
-                "new_cases_rolling7": new_cases_rolling7,
-                "trend_new_cases": trend_new_cases,
-                "new_cases": new_cases
-            }
+            country_predictions = []  # Prédictions pour le pays en cours
 
-            # Prédiction des cas
-            features_for_cases = pd.DataFrame([base_features])[features_cases]
-            new_cases_pred = model_cases.predict(features_for_cases)[0]
+            for single_date in date_range:
+                day = single_date.day
+                month = single_date.month
+                year = single_date.year
+                days_since_start = (single_date - data["date"].min()).days
 
-            # Prédiction des décès
-            features_for_deaths = pd.DataFrame([base_features])[features_deaths]
-            new_deaths_pred = model_deaths.predict(features_for_deaths)[0]
+                # Features de base communes
+                base_features = { 
+                    "total_cases": total_cases,
+                    "location_encoded": row["location_encoded"],
+                    "day": day,
+                    "month": month,
+                    "year": year,
+                    "total_deaths": total_deaths,
+                    "epidemic_phase": 1,
+                    "days_since_start": days_since_start,
+                    "new_cases_rolling7": new_cases_rolling7,
+                    "trend_new_cases": trend_new_cases,
+                    "new_cases": new_cases
+                }
 
-            # Prédiction de la propagation géographique
-            features_for_geo = pd.DataFrame([base_features])[features_geo]
-            countries_reporting_pred = model_geo.predict(features_for_geo)[0]
+                # Prédiction des cas
+                features_for_cases = pd.DataFrame([base_features])[features_cases]
+                new_cases_pred = model_cases.predict(features_for_cases)[0]
 
-            future_rows.append({
-                "date": single_date.date(),
-                "location": row["location"],
-                "new_cases_pred": new_cases_pred,
-                "new_deaths_pred": new_deaths_pred,
-                "countries_reporting_pred": countries_reporting_pred
-            })
+                # Prédiction des décès
+                features_for_deaths = pd.DataFrame([base_features])[features_deaths]
+                new_deaths_pred = model_deaths.predict(features_for_deaths)[0]
+
+                # Prédiction de la propagation géographique
+                features_for_geo = pd.DataFrame([base_features])[features_geo]
+                countries_reporting_pred = model_geo.predict(features_for_geo)[0]
+
+                country_predictions.append({
+                    "date": single_date.date(),
+                    "location": location,
+                    "new_cases_pred": new_cases_pred,
+                    "new_deaths_pred": new_deaths_pred,
+                    "countries_reporting_pred": countries_reporting_pred
+                })
+
+            # Ajout des prédictions du pays au total
+            future_rows.extend(country_predictions)
+            processed_locations.add(location)
+            print(f"✅ {location} terminé: {len(country_predictions)} prédictions générées")
+
+            # Sauvegarde intermédiaire tous les 10 pays
+            if i % 10 == 0:
+                print(f"💾 Point de sauvegarde: {i}/{total_countries} pays traités")
+                print(f"Pays traités: {sorted(processed_locations)}")
+
+    except Exception as e:
+        print(f"\n❌ ERREUR pendant le traitement: {str(e)}")
+        print(f"Pays traités ({len(processed_locations)}/{total_countries}): {sorted(processed_locations)}")
+        print(f"Dernier pays en cours: {location}")
+        raise e
 
     # Application des règles métier
     future_rows = post_traitement(future_rows)
     
-    print(f"\n✅ Prédictions générées")
-    print(f"📊 {len(future_rows)} prédictions générées pour {len(pd.DataFrame(future_rows)['location'].unique())} pays")
+    print(f"\n✅ Prédictions générées avec succès")
+    print(f"📊 {len(future_rows)} prédictions générées pour {len(processed_locations)} pays")
+    print(f"Pays traités: {sorted(processed_locations)}")
     
     return future_rows
 
