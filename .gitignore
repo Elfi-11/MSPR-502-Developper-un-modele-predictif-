@@ -169,5 +169,19 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
+# Cypress
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+cypress.env.json
+cypress/results/
+cypress/reports/
+.cypress/
+mochawesome-report/
+
+# Test artifacts
+*.mp4
+*.webm
+
 
 

@@ -123,13 +123,13 @@ const Archives = () => {
       {/* Zone d'affichage des graphiques */}
       <Box sx={{ mt: 4 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 3 }} data-testid="error-message">
             {error}
           </Alert>
         )}
 
         {loading && (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 3, textAlign: 'center' }} data-testid="loading-spinner">
             <CircularProgress />
             <Typography sx={{ mt: 2 }}>
               Chargement des données...
@@ -138,7 +138,7 @@ const Archives = () => {
         )}
 
         {!loading && !error && selectedCountries.length === 0 && (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 3, textAlign: 'center' }} data-testid="no-countries-message">
             <Typography variant="h6" color="text.secondary">
               Sélectionnez un ou plusieurs pays pour afficher les données
             </Typography>
@@ -148,7 +148,7 @@ const Archives = () => {
         {!loading && !error && selectedCountries.length > 0 && Object.keys(covidData).length > 0 && (
           <Grid container spacing={4}>
             <Grid item xs={12} lg={6}>
-              <Paper sx={{ p: 3, height: '500px' }}>
+              <Paper sx={{ p: 3, height: '500px' }} data-testid="chart-new_cases">
                 <CovidArchiveChart 
                   data={covidData}
                   metric="new_cases"
@@ -157,7 +157,7 @@ const Archives = () => {
               </Paper>
             </Grid>
             <Grid item xs={12} lg={6}>
-              <Paper sx={{ p: 3, height: '500px' }}>
+              <Paper sx={{ p: 3, height: '500px' }} data-testid="chart-new_deaths">
                 <CovidArchiveChart 
                   data={covidData}
                   metric="new_deaths"
@@ -166,7 +166,7 @@ const Archives = () => {
               </Paper>
             </Grid>
             <Grid item xs={12} lg={6}>
-              <Paper sx={{ p: 3, height: '500px' }}>
+              <Paper sx={{ p: 3, height: '500px' }} data-testid="chart-total_cases">
                 <CovidArchiveChart 
                   data={covidData}
                   metric="total_cases"
@@ -175,7 +175,7 @@ const Archives = () => {
               </Paper>
             </Grid>
             <Grid item xs={12} lg={6}>
-              <Paper sx={{ p: 3, height: '500px' }}>
+              <Paper sx={{ p: 3, height: '500px' }} data-testid="chart-hosp_patients">
                 <CovidArchiveChart 
                   data={covidData}
                   metric="hosp_patients"
@@ -187,7 +187,7 @@ const Archives = () => {
         )}
 
         {!loading && !error && selectedCountries.length > 0 && Object.keys(covidData).length === 0 && (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 3, textAlign: 'center' }} data-testid="no-data-message">
             <Typography variant="h6" color="text.secondary">
               Aucune donnée disponible pour les filtres sélectionnés
             </Typography>
