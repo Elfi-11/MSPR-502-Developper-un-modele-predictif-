@@ -1,3 +1,10 @@
 export { default as GeographicSpreadChart } from './GeographicSpreadChart';
 export { default as MortalityChart } from './MortalityChart';
-export { default as TransmissionChart } from './TransmissionChart'; 
+export { default as TransmissionChart } from './TransmissionChart';
+export { default as CovidArchiveChart } from './CovidArchiveChart';
+export { default as CovidBarChart } from './CovidBarChart';
+export { default as CovidRadarChart } from './CovidRadarChart';
+export { default as CovidChart } from './CovidChart';
+export { default as CovidBarChart } from './CovidBarChart';
+export { default as CovidRadarChart } from './CovidRadarChart';
+export { default as CovidChart } from './CovidChart'; 

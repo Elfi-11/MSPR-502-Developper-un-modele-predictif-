@@ -27,13 +27,21 @@ def insert_f_covid():
 
     db: Session = get_sync_db()
     try:
-        print("Suppression des anciennes tables...")
-        db.execute(text("DROP TABLE IF EXISTS d_location CASCADE"))
-        db.commit()
+        # Vérifier si la table d_location existe et a des données
+        location_count = db.execute(text("SELECT COUNT(*) FROM d_location")).scalar()
+        
+        if location_count == 0:
+            print("Import des locations dans d_location...")
+            locations_df = pd.DataFrame({'location_name': df['location'].unique()})
+            locations_df.to_sql('d_location', db.bind, if_exists='append', index=False)
+            db.commit()
+        else:
+            print(f"Table d_location existe déjà avec {location_count} locations.")
 
-        print("Import de la table d_location...")
-        locations_df = pd.DataFrame({'location_name': df['location'].unique()})
-        locations_df.to_sql('d_location', db.bind, if_exists='fail', index=True, index_label='location_id')
+        # Vider uniquement les données COVID (pas la structure)
+        print("Suppression des anciennes données COVID...")
+        db.execute(text("DELETE FROM f_covid"))
+        db.commit()
 
         location_mapping = pd.read_sql('SELECT location_id, location_name FROM d_location', db.bind)
 
@@ -52,8 +60,8 @@ def insert_f_covid():
             'people_vaccinated'
         ]]
 
-        print("Import de la table f_covid...")
-        f_covid.to_sql('f_covid', db.bind, if_exists='replace', index=True, index_label='covid_fact_id')
+        print("Import des données f_covid...")
+        f_covid.to_sql('f_covid', db.bind, if_exists='append', index=False)
         db.commit()
         print("✅ Import COVID terminé.")
     except Exception as e:
@@ -70,8 +78,16 @@ def insert_f_mpox():
 
     db: Session = get_sync_db()
     try:
-        print("Suppression de la table f_mpox...")
-        db.execute(text("DROP TABLE IF EXISTS f_mpox"))
+        # Vérifier si la table d_location existe
+        location_count = db.execute(text("SELECT COUNT(*) FROM d_location")).scalar()
+        
+        if location_count == 0:
+            print("⚠️  Attention: Table d_location vide. Importez d'abord les données COVID.")
+            return
+
+        # Vider uniquement les données Mpox (pas la structure)
+        print("Suppression des anciennes données Mpox...")
+        db.execute(text("DELETE FROM f_mpox"))
         db.commit()
 
         location_mapping = pd.read_sql('SELECT location_id, location_name FROM d_location', db.bind)
@@ -95,8 +111,8 @@ def insert_f_mpox():
             'new_deaths_smoothed_per_million'
         ]]
 
-        print("Import de la table f_mpox...")
-        f_mpox.to_sql('f_mpox', db.bind, if_exists='replace', index=True, index_label='mpox_fact_id')
+        print("Import des données f_mpox...")
+        f_mpox.to_sql('f_mpox', db.bind, if_exists='append', index=False)
         db.commit()
         print("✅ Import Mpox terminé.")
     except Exception as e:
